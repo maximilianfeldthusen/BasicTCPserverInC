@@ -2,6 +2,8 @@
 
 Simple TCP Server in C
 
+I wrote it for my LinkedIn account 
+
 Constants:
 PORT is defined as 8080, which is the port on which the server will listen for incoming connections.
 BUFFER_SIZE is set to 1024, which determines the size of the buffer used for reading client messages.
