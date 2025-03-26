@@ -1,4 +1,7 @@
-# BasicTCPserverInC
+
+## Documentation
+
+### BasicTCPserverInC
 
 Simple TCP Server in C
 
