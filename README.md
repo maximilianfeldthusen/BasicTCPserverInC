@@ -1,7 +1,7 @@
 
 ## Documentation
 
-### BasicTCPserverInC
+### Basic-TCP-server
 
 
 This C code implements a simple TCP server that listens for incoming connections on a specified port (8080) and communicates with the clients. Let's break it down step by step:
