@@ -1,72 +1,79 @@
-
 ## Documentation
 
-### Basic-TCP-server
+### Overview:
+This code implements a simple TCP server that listens on port 8080. When a client connects, the server reads a message sent by the client, prints it out, and responds with a greeting message. It then closes the connection and waits for the next client.
 
+---
 
-This C code implements a simple TCP server that listens for incoming connections on a specified port (8080) and communicates with the clients. Let's break it down step by step:
+### Breakdown of the Code:
 
-### Header Files
+#### 1. **Include Necessary Headers**
 ```c
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <sys/types.h>
-#include <sys/socket.h>
+#include <stdio.h>      // For printf, perror
+#include <stdlib.h>     // For exit, EXIT_FAILURE
+#include <string.h>     // For strlen
+#include <unistd.h>     // For close
+#include <arpa/inet.h>  // For sockaddr_in, inet_addr
+#include <sys/types.h>  // Data types
+#include <sys/socket.h> // For socket functions
 ```
-- **stdio.h**: For standard input and output functions (like `printf` and `perror`).
-- **stdlib.h**: For general utility functions (like `exit`).
-- **string.h**: For string manipulation functions (like `strlen`).
-- **unistd.h**: For standard symbolic constants and types (like `close`).
-- **arpa/inet.h**: For Internet operations (like `htons` and `INADDR_ANY`).
-- **sys/types.h** and **sys/socket.h**: For socket programming types and functions.
+These headers provide the functions and constants needed for socket programming, input/output, memory management, etc.
 
-### Constants
+---
+
+#### 2. **Define Constants**
 ```c
 #define PORT 8080
 #define BUFFER_SIZE 1024
-#define BACKLOG 3  // Maximum number of pending connections
+#define BACKLOG 3  // Number of pending connections queue
 ```
-- **PORT**: The port number on which the server listens for incoming connections.
-- **BUFFER_SIZE**: The size of the buffer used to read data from the client.
-- **BACKLOG**: The maximum number of pending connections that can be queued while the server is processing another connection.
+- `PORT`: The port number the server listens on.
+- `BUFFER_SIZE`: Size of the buffer for reading client data.
+- `BACKLOG`: Max number of queued connection requests.
 
-### Main Function
-```c
-int main() {
-```
-This is the entry point of the program.
+---
 
-### Socket Creation
+#### 3. **Main Function and Variable Declarations**
 ```c
 int server_fd, new_socket;
 struct sockaddr_in address;
 socklen_t addrlen = sizeof(address);
 char buffer[BUFFER_SIZE] = {0};
 const char *response = "Hello from server";
+```
+- `server_fd`: Socket file descriptor for the server.
+- `new_socket`: Socket file descriptor for each accepted client connection.
+- `address`: Structure holding server address info.
+- `buffer`: Buffer to store data received from clients.
+- `response`: Message sent back to clients.
 
-// Creating socket file descriptor
+---
+
+#### 4. **Create a Socket**
+```c
 if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
     perror("Socket creation failed");
     exit(EXIT_FAILURE);
 }
 ```
-- **socket()**: A system call to create a new socket. The parameters specify the address family (IPv4), socket type (TCP), and protocol (0 means use the default protocol).
-- If the socket creation fails, it prints an error message and exits.
+- Creates a TCP socket (`SOCK_STREAM`).
+- Checks if socket creation failed.
 
-### Setting Up the Address Structure
+---
+
+#### 5. **Configure Server Address**
 ```c
 address.sin_family = AF_INET;
-address.sin_addr.s_addr = INADDR_ANY;
-address.sin_port = htons(PORT);
+address.sin_addr.s_addr = INADDR_ANY; // Accept connections from any IP address
+address.sin_port = htons(PORT);       // Convert port to network byte order
 ```
-- **sin_family**: Specifies the address family (IPv4 in this case).
-- **sin_addr.s_addr**: Set to `INADDR_ANY` so that the server accepts connections on any of the host's IP addresses.
-- **sin_port**: The port number, converted to network byte order using `htons()`.
+- `AF_INET`: IPv4 addresses.
+- `INADDR_ANY`: Binds to all available interfaces.
+- `htons()`: Converts port number to network byte order.
 
-### Binding the Socket
+---
+
+#### 6. **Bind Socket to Address**
 ```c
 if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
     perror("Bind failed");
@@ -74,80 +81,98 @@ if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) {
     exit(EXIT_FAILURE);
 }
 ```
-- **bind()**: Associates the socket with the address specified in `address`. If it fails, it prints an error message, closes the socket, and exits.
+- Associates the socket with the specified IP address and port.
 
-### Listening for Connections
+---
+
+#### 7. **Listen for Incoming Connections**
 ```c
 if (listen(server_fd, BACKLOG) < 0) {
     perror("Listen failed");
     close(server_fd);
     exit(EXIT_FAILURE);
 }
-```
-- **listen()**: Prepares the socket to accept incoming connections. It takes the backlog parameter, which is the maximum number of queued connections.
-
-### Accepting Connections
-```c
 printf("Server is listening on port %d
 ", PORT);
+```
+- Starts listening for client connection requests.
+- `BACKLOG` specifies the queue size for pending connections.
 
+---
+
+#### 8. **Main Loop: Accept and Handle Connections**
+```c
 while (1) {
-    // Accepting a connection
+    // Accept a new connection
     if ((new_socket = accept(server_fd, (struct sockaddr *)&address, &addrlen)) < 0) {
         perror("Accept failed");
-        continue; // Continue to accept other connections
+        continue; // Skip to next iteration
     }
 ```
-- The server enters an infinite loop to continuously accept incoming connections.
-- **accept()**: Blocks until a client connects, at which point it accepts the connection and returns a new socket file descriptor for communication with the client.
+- `accept()` waits for a client to connect.
+- On success, `new_socket` is used for communication with that client.
 
-### Reading Data from the Client
+---
+
+#### 9. **Receive Data from Client**
 ```c
-    ssize_t bytes_read = recv(new_socket, buffer, BUFFER_SIZE - 1, 0);
-    if (bytes_read < 0) {
-        perror("Read failed");
-        close(new_socket);
-        continue; // Continue to accept other connections
-    }
-    buffer[bytes_read] = '\0'; // Null terminate the string
-    printf("Message from client: %s
+ssize_t bytes_read = recv(new_socket, buffer, BUFFER_SIZE - 1, 0);
+if (bytes_read < 0) {
+    perror("Read failed");
+    close(new_socket);
+    continue;
+}
+buffer[bytes_read] = '\0'; // Null-terminate received data
+printf("Message from client: %s
 ", buffer);
 ```
-- **recv()**: Reads data sent by the client into the `buffer`. It returns the number of bytes read.
-- If reading fails, it closes the connection with the client and continues to accept new connections.
-- The data read from the client is null-terminated for safe string handling.
+- Reads data sent by the client.
+- Ensures the buffer is null-terminated to safely print as a string.
+- Prints the client's message.
 
-### Sending a Response to the Client
+---
+
+#### 10. **Send Response to Client**
 ```c
-    ssize_t bytes_sent = send(new_socket, response, strlen(response), 0);
-    if (bytes_sent < 0) {
-        perror("Send failed");
-    } else {
-        printf("Response sent to client
+ssize_t bytes_sent = send(new_socket, response, strlen(response), 0);
+if (bytes_sent < 0) {
+    perror("Send failed");
+} else {
+    printf("Response sent to client
 ");
-    }
-```
-- **send()**: Sends a response back to the client. If it fails, an error message is printed.
-
-### Closing the Socket
-```c
-    // Closing the socket
-    close(new_socket);
 }
 ```
-- After handling the client, the server closes the connection socket (`new_socket`) to clean up resources.
+- Sends a greeting message back to the client.
+- Checks for errors in sending.
 
-### Final Closing of the Server Socket
+---
+
+#### 11. **Close Client Connection**
 ```c
-// Closing the server socket (unreachable in current loop)
+close(new_socket);
+```
+- Closes the client socket.
+- The server then loops back to accept another connection.
+
+---
+
+#### 12. **Cleanup (Unreachable in Current Loop)**
+```c
 close(server_fd);
 return 0;
 ```
-- The server socket (`server_fd`) is closed, though in this implementation, it is unreachable because of the infinite loop. In a real application, you would want a mechanism to break out of the loop and clean up resources gracefully.
+- Closes the server socket when the server terminates (not reachable in this infinite loop).
 
-### Summary
-This code sets up a simple TCP server that listens on port 8080, accepts client connections, reads messages from clients, sends a response, and continues to serve new clients in a loop. It includes error handling for socket creation, binding, listening, reading, and sending.
+---
 
+### Summary:
+- The server sets up a TCP socket, binds it to port 8080, and begins listening.
+- It enters an infinite loop to accept incoming client connections.
+- For each client:
+  - Reads a message.
+  - Prints it.
+  - Sends back a greeting.
+  - Closes the connection.
+- Continues to accept new clients indefinitely.
 
-
-
+This is a basic example of socket programming in C, demonstrating server-side TCP communication.
